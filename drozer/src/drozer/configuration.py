@@ -33,7 +33,7 @@ class Configuration(object):
         
         if path == None or path == "":
             sys.stderr.write("Could not find %s. Please ensure that it is installed and on your PATH.\n\nIf this error persists, specify the path in the ~/.drozer_config file:\n\n    [executables]\n    %s = %s\n" % (name, name, platform.system() == "Windows" and "C:\\path\\to\\" + name or "/path/to/" + name))
-            
+
         return path
     
     @classmethod

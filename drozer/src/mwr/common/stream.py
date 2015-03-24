@@ -30,7 +30,6 @@ class StreamWrapper(object):
 
         self.stream.write(text)
 
-
 class ColouredStream(StreamWrapper):
     """
     ColouredStream is a wrapper around a stream, that processes colour meta-
@@ -52,11 +51,74 @@ class ColouredStream(StreamWrapper):
         codes.
         """
 
-        if self.os == 'Linux' or self.os == 'Darwin' or self.os.startswith('CYGWIN'):
-            self.stream.write(format_colors(text))
-        else:
-            self.stream.write(remove_colors(text))
 
+        if self.os == 'Linux' or self.os == 'Darwin' or self.os.startswith('CYGWIN'):
+            text1 = format_colors(text)
+            self.stream.write(text1)
+        else:
+            text1 = remove_colors(text)
+            self.stream.write(text1)
+
+class FileColouredStream(StreamWrapper):
+    """
+    # save
+    """
+    def __init__(self, stream):
+        StreamWrapper.__init__(self, stream)
+        self.os = platform.system()
+
+    def write(self, text):
+        if self.os == 'Linux' or self.os == 'Darwin' or self.os.startswith('CYGWIN'):
+            text1 = format_colors(text)
+            try:
+
+               wf = open("d:\\test.txt", "w+")
+
+               try:
+                   wf.write(text1)
+               finally:
+                   wf.close()
+            except:
+                self.stream.write("write  error")
+        else:
+            text1 = remove_colors(text)
+            try:
+               wf = open("d:\\test.txt", "a")
+               try:
+                   wf.write(text1+"\n")
+               finally:
+                   wf.close()
+            except:
+                self.stream.write("write  error")
+
+class XMLColouredStream(StreamWrapper):
+    def __init__(self, stream):
+        StreamWrapper.__init__(self, stream)
+        self.os = platform.system()
+
+    def write(self, text):
+        if self.os == 'Linux' or self.os == 'Darwin' or self.os.startswith('CYGWIN'):
+            text1 = format_colors(text)
+            try:
+
+               wf = open("d:\\txml.xml", "w+")
+
+               try:
+                   wf.write(text1)
+               finally:
+                   wf.close()
+            except:
+                self.stream.write("write  error")
+        else:
+            text1 = remove_colors(text)
+            try:
+               wf = open("d:\\txml.xml", "a")
+               try:
+                   wf.write(text1+"\n")
+               finally:
+                   wf.close()
+            except:
+                self.stream.write("write  error")
 
 class DecolouredStream(StreamWrapper):
     """

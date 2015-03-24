@@ -225,6 +225,7 @@ class Provider(loader.ClassLoader):
             strings = []
 
             if ".apk" in path:
+
                 dex_file = self.extractFromZip("classes.dex", path, self.cacheDir())
 
                 if dex_file != None:

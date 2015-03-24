@@ -41,6 +41,7 @@ class Cmd(cmd.Cmd):
         self.stdout = self.stdout
         self.stderr = sys.stderr
         self.variables = {}
+        self.cmds = {"run app.package.manifest com.boohee.light"}
 
     def cmdloop(self, intro=None):
         """
@@ -53,13 +54,17 @@ class Cmd(cmd.Cmd):
             self.push_completer(self.complete, self.history_file)
         try:
             stop = None
-            while not stop:
+            # loop 5 times
+            for cmd in self.cmds:
+            # while not stop:
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                 else:
                     if self.use_rawinput:
                         try:
-                            line = raw_input(self.prompt)
+                            # line = raw_input(self.prompt)
+                            line = cmd
+                            self.stdout.write(line)
                         except EOFError:
                             line = 'EOF'
                     else:

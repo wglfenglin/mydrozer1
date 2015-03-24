@@ -25,6 +25,9 @@ class ClassLoader(object):
             loader = utils.ClassLoader(source, self.__get_cache_path(), self.__get_constructor(), self.klass('java.lang.ClassLoader').getSystemClassLoader(), relative_to=relative_to)
             loader.android_path = lambda: Configuration.library("android.jar")
             loader.dx_path = lambda: Configuration.executable("dx.bat") if platform.system() == "Windows" else Configuration.executable("dx")
+            """
+              javac not found
+              """
             loader.javac_path = lambda: Configuration.executable("javac")
             
             Module.cache_klass(".".join([source, klass]), loader.loadClass(klass))

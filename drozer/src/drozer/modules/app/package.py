@@ -396,23 +396,25 @@ class Manifest(Module, common.Assets):
         level = 0
         
         for line in lines:
+            # self.txmlstdout.write(line)
             if line.startswith("</"):
                 level -= 1
-            
+
             if line.startswith("<") and not line.startswith("</"):
                 pattern = re.compile("(.*)<([^>]+)>(.*)")
                 match = pattern.match(line)
-                
+
                 contents = match.group(2).split(" ", 1)
-                
-                self.stdout.write("%s%s<[color green]%s[/color]" % ("  " * level, match.group(1), contents[0]))
+
+                self.txmlstdout.write("%s%s<[color green]%s[/color]" % ("  " * level, match.group(1), contents[0]))
+
                 if len(contents) > 1:
-                    self.stdout.write(("\n%s%s" % ("  " * level, " " * (len(contents[0]) + 1))).join(map(lambda m: " [color purple]%s[/color]=[color red]\"%s\"[/color]" % m, re.compile("([^=]+)=\"([^\"]+)\"\s*").findall(contents[1]))))
-                        
-                self.stdout.write(">\n")
+                    self.txmlstdout.write(("\n%s%s" % ("  " * level, " " * (len(contents[0]) + 1))).join(map(lambda m: " [color purple]%s[/color]=[color red]\"%s\"[/color]" % m, re.compile("([^=]+)=\"([^\"]+)\"\s*").findall(contents[1]))))
+
+                self.txmlstdout.write(">\n")
             else:
-                self.stdout.write("%s%s\n" % ("  " * level, line))
-            
+                self.txmlstdout.write("%s%s\n" % ("  " * level, line))
+
             if line.startswith("<") and not "</" in line:
                 level += 1
 

@@ -9,8 +9,9 @@ def which(executable):
     """
     
     for path in os.getenv("PATH", "").split(os.pathsep):
-        trial = os.path.join(path, executable)
-        
+        # change
+        trial = os.path.join(path, executable, '.exe')
+
         if os.path.isfile(trial) and os.access(trial, os.X_OK):
             return trial
 

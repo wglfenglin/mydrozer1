@@ -61,9 +61,9 @@ class ClassBuilder(object):
         """
         Spawn a shell command
         """
-        
+
         print " ".join(argv)
-        
+
         # TODO: do we need to use subprocess in some situations? retr = subprocess.call(args)
         return os.spawnve(os.P_WAIT, argv[0], argv, os.environ) == 0
 
@@ -79,6 +79,5 @@ class ClassBuilder(object):
         """
         Retrieve the source code from the source file.
         """
-
         return fs.read(self.path)
         
