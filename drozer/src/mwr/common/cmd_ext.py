@@ -41,7 +41,7 @@ class Cmd(cmd.Cmd):
         self.stdout = self.stdout
         self.stderr = sys.stderr
         self.variables = {}
-        self.cmds = {"run app.package.manifest com.boohee.light"}
+        self.cmds = {"run app.activity.info --package com.boohee.light", "run app.package.attacksurface com.boohee.light ", "run app.package.manifest com.boohee.light"}
 
     def cmdloop(self, intro=None):
         """

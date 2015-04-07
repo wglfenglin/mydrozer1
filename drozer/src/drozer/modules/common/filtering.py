@@ -11,8 +11,16 @@ class Filters(object):
 
         if collection == None:
             collection = []
-            
+        '''  new
+        new
+        '''
+        def f(e):
+            if str(getattr(e, key)).upper().find(str(term).upper()) >=0:
+                return 1
+            else:
+                return -1
+
         if term != None and term != "":
-            return filter(lambda e: str(getattr(e, key)).upper().find(str(term).upper()) >= 0, collection)
+            return filter(f, collection)
         else:
             return collection

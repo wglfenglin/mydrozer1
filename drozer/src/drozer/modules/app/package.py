@@ -388,9 +388,9 @@ class Manifest(Module, common.Assets):
         if arguments.package == None or arguments.package == "":
             self.stderr.write("No package provided.\n")
         else:
-            self.__write_manifest(self.getAndroidManifest(arguments.package))
-           
-    
+            AndroidManifest = self.getAndroidManifest(arguments.package)
+            self.__write_manifest(AndroidManifest)
+
     def __write_manifest(self, manifest):
         lines = manifest.split("\n")
         level = 0
