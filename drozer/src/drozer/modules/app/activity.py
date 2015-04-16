@@ -59,6 +59,7 @@ class Info(Module, common.Filters, common.IntentFilter, common.PackageManager):
     path = ["app", "activity"]
     permissions = ["com.mwr.dz.permissions.GET_CONTEXT"]
 
+
     def add_arguments(self, parser):
         parser.add_argument("-a", "--package", default=None, help="specify the package to inspect")
         parser.add_argument("-f", "--filter", default=None, help="specify a filter term for the activity name")
@@ -98,7 +99,9 @@ class Info(Module, common.Filters, common.IntentFilter, common.PackageManager):
         elif arguments.package or arguments.verbose:
             self.stdout.write("Package: %s\n" % package.packageName)
             self.stdout.write("  No matching activities.\n\n")
-    
+
+
+
     def __print_activity(self, package, activity, prefix, include_intent_filters):
         self.stdout.write("%s%s\n" % (prefix, activity.name))
         

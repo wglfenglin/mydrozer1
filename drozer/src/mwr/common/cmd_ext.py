@@ -1,5 +1,6 @@
 import cmd
 import os
+
 try:
     import readline
 except ImportError:
@@ -11,6 +12,7 @@ import textwrap
 
 from mwr.common import system
 from mwr.common.text import wrap
+
 
 class Cmd(cmd.Cmd):
     """
@@ -41,8 +43,10 @@ class Cmd(cmd.Cmd):
         self.stdout = self.stdout
         self.stderr = sys.stderr
         self.variables = {}
-        self.cmds = {"run app.activity.info --package com.boohee.light", "run app.package.attacksurface com.boohee.light ", "run app.package.manifest com.boohee.light"}
-
+        "run scanner.misc.native",
+        "run app.package.manifest com.boohee.light , run app.activity.start --component com.android.browser com.android.browser.BrowserActivity --flags ACTIVITY_NEW_TASK --data-uri www.baidu.com"
+        self.cmds = [ "run app.activity.start --component com.android.browser com.android.browser.BrowserActivity --flags ACTIVITY_NEW_TASK --data-uri www.baidu.com"]
+        self.cmds = ["run app.package.attacksurface  com.boohee.light"]
     def cmdloop(self, intro=None):
         """
         Repeatedly issue a prompt, accept input, parse an initial prefix
@@ -56,7 +60,7 @@ class Cmd(cmd.Cmd):
             stop = None
             # loop 5 times
             for cmd in self.cmds:
-            # while not stop:
+                # while not stop:
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                 else:
@@ -75,21 +79,23 @@ class Cmd(cmd.Cmd):
                             line = 'EOF'
                         else:
                             line = line.rstrip('\r\n')
-                            
+
                 try:
                     line = self.precmd(line)
                     stop = self.onecmd(line)
                     stop = self.postcmd(stop, line)
                 except ValueError as e:
                     if e.message == "No closing quotation":
-                        self.stderr.write("Failed to parse your command, because there were unmatched quotation marks.\n")
-                        self.stderr.write("Did you want a single ' or \"? You need to escape it (\\' or \\\") or surround it with the other type of quotation marks (\"'\" or '\"').\n\n")
+                        self.stderr.write(
+                            "Failed to parse your command, because there were unmatched quotation marks.\n")
+                        self.stderr.write(
+                            "Did you want a single ' or \"? You need to escape it (\\' or \\\") or surround it with the other type of quotation marks (\"'\" or '\"').\n\n")
                     else:
                         raise
             self.postloop()
         except Exception, e:
             pass
-            
+
         finally:
             if self.use_rawinput and self.completekey:
                 self.pop_completer()
@@ -109,12 +115,12 @@ class Cmd(cmd.Cmd):
                 stripped = len(origline) - len(line)
                 begidx = readline.get_begidx() - stripped
                 endidx = readline.get_endidx() - stripped
-    
+
                 if begidx > 0:
                     if ">" in line and begidx > line.index(">"):
                         self.completion_matches = self.completefilename(text, line, begidx, endidx)
                         return self.completion_matches[0]
-                        
+
                     command = self.parseline(line)[0]
                     if command == '':
                         compfunc = self.completedefault
@@ -130,8 +136,8 @@ class Cmd(cmd.Cmd):
                 if len(matches) == 1 and matches[0].endswith(os.path.sep):
                     self.completion_matches = matches
                 else:
-                    self.completion_matches = map(lambda s: s+" ", matches)
-                
+                    self.completion_matches = map(lambda s: s + " ", matches)
+
         try:
             return self.completion_matches[state]
         except IndexError:
@@ -159,7 +165,7 @@ class Cmd(cmd.Cmd):
             getattr(self, "do_" + self.aliases[argv[0]])(" ".join(argv[1:]))
         else:
             cmd.Cmd.default(self, line)
-            
+
     def do_echo(self, arguments):
         """
         usage: echo LINE
@@ -172,7 +178,7 @@ class Cmd(cmd.Cmd):
             dz> echo run app.package.info -a $P
             run app.package.info com.example.app
         """
-        
+
         print self.__do_substitutions(arguments)
 
     def do_env(self, arguments):
@@ -185,7 +191,7 @@ class Cmd(cmd.Cmd):
         for key in self.variables:
             print "%s=%s" % (key, self.variables[key])
         print
-    
+
     def do_set(self, arguments):
         """
         usage: set NAME=VALUE [NAME=VALUE ...]
@@ -197,20 +203,20 @@ class Cmd(cmd.Cmd):
             dz> set P=com.example.app
             dz> run app.package.info -a $P
         """
-        
+
         for kv in shlex.split(arguments):
             if "=" in kv:
                 key, value = kv.split("=", 1)
-                
+
                 self.variables[key] = value
-        
+
     def do_unset(self, arguments):
         """
         usage: unset NAME [NAME ...]
         
         Removes one-or-more values previously stored in variables.
         """
-        
+
         for key in shlex.split(arguments):
             if key in self.variables:
                 del self.variables[key]
@@ -241,7 +247,7 @@ class Cmd(cmd.Cmd):
 
             self.__output_redirected = None
 
-            del(tee)
+            del (tee)
 
         return stop
 
@@ -249,7 +255,7 @@ class Cmd(cmd.Cmd):
         """
         Process a command before it executes: perform variable substitutions and
         set up any output redirection.
-        """ 
+        """
 
         # perform Bash-style substitutions
         if line.find("!!") >= 0 or line.find("!$") >= 0 or line.find("!^") >= 0 or line.find("!*") >= 0:
@@ -261,38 +267,38 @@ class Cmd(cmd.Cmd):
             line = self.__redirect_output(line)
 
         return line
-    
+
     def preloop(self):
         if self.intro:
-            self.stdout.write(str(self.intro)+"\n")
-        
+            self.stdout.write(str(self.intro) + "\n")
+
     def push_completer(self, completer, history_file=None):
         if "readline" in sys.modules:
             self.__completer_stack.append(readline.get_completer())
             readline.set_completer(completer)
             readline.set_completer_delims(readline.get_completer_delims().replace("/", ""))
-            
+
             if len(self.__history_stack) > 0 and self.__history_stack[-1]:
                 readline.write_history_file(self.__history_stack[-1])
-                
+
             self.__history_stack.append(history_file)
             readline.clear_history()
             if history_file != None and os.path.exists(history_file):
                 readline.read_history_file(history_file)
-                
+
             readline.parse_and_bind(self.completekey + ": complete")
-    
+
     def pop_completer(self):
         if "readline" in sys.modules:
             if self.__history_stack[-1] != None:
                 readline.write_history_file(self.__history_stack.pop())
             else:
                 self.__history_stack.pop()
-            
+
             readline.clear_history()
             if len(self.__history_stack) > 0 and self.__history_stack[-1]:
                 readline.read_history_file(self.__history_stack[-1])
-                
+
             readline.set_completer(self.__completer_stack.pop())
 
     def __build_tee(self, console, destination):
@@ -305,7 +311,7 @@ class Cmd(cmd.Cmd):
             mode = 'a'
         else:
             mode = 'w'
-        
+
         return system.Tee(console, destination.strip(), mode)
 
     def __do_substitutions(self, line):
@@ -315,16 +321,16 @@ class Cmd(cmd.Cmd):
 
         # len(argv) ends up < 1 if line is blank, will cause an exception if not checked
         if not line:
-            return "" 
+            return ""
 
-        # perform any arbitrary variable substitutions, from the dictionary
+            # perform any arbitrary variable substitutions, from the dictionary
         for name in self.variables:
             line = line.replace("$%s" % name, self.variables[name])
-        
+
         # perform special variable substitutions, referencing the previous command
         if self.lastcmd != "":
             argv = shlex.split(self.lastcmd)
-            
+
             line = line.replace("!!", self.lastcmd)
             line = line.replace("!$", argv[-1])
             line = line.replace("!^", argv[1])
@@ -341,7 +347,7 @@ class Cmd(cmd.Cmd):
         Set up output redirection, by building a Tee between stdout and the
         specified file.
         """
-        
+
         (line, destination) = line.rsplit(">", 1)
 
         if len(destination) > 0:
