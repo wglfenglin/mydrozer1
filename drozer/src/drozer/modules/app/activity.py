@@ -181,4 +181,3 @@ For more information on how to formulate an Intent, type 'help intents'."""
         if action.dest in ["action", "category", "component", "data_uri",
                            "extras", "flags", "mimetype"]:
             return android.Intent.get_completion_suggestions(action, text, **kwargs)
-            

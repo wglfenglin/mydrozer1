@@ -1,5 +1,6 @@
 import platform
 import re
+import MySQLdb
 
 class StreamWrapper(object):
     """
@@ -30,6 +31,7 @@ class StreamWrapper(object):
 
         self.stream.write(text)
 
+
 class ColouredStream(StreamWrapper):
     """
     ColouredStream is a wrapper around a stream, that processes colour meta-
@@ -59,6 +61,9 @@ class ColouredStream(StreamWrapper):
             text1 = remove_colors(text)
             self.stream.write(text1)
 
+'''
+added
+'''
 class FileColouredStream(StreamWrapper):
     """
     # save
@@ -68,28 +73,25 @@ class FileColouredStream(StreamWrapper):
         self.os = platform.system()
 
     def write(self, text):
+
         if self.os == 'Linux' or self.os == 'Darwin' or self.os.startswith('CYGWIN'):
             text1 = format_colors(text)
             try:
-
                wf = open("d:\\test.txt", "w+")
-
-               try:
-                   wf.write(text1)
-               finally:
-                   wf.close()
+               wf.write(text1)
             except:
                 self.stream.write("write  error")
+            finally:
+                 wf.close()
         else:
             text1 = remove_colors(text)
             try:
                wf = open("d:\\test.txt", "a")
-               try:
-                   wf.write(text1+"\n")
-               finally:
-                   wf.close()
+               wf.write(text1+"\n")
             except:
                 self.stream.write("write  error")
+            finally:
+                   wf.close()
 
 class XMLColouredStream(StreamWrapper):
     def __init__(self, stream):
@@ -120,6 +122,37 @@ class XMLColouredStream(StreamWrapper):
             except:
                 self.stream.write("write  error")
 
+class MYSQLDB (StreamWrapper):
+    """
+    # save
+    """
+
+
+    def __init__(self, stream):
+        StreamWrapper.__init__(self, stream)
+        self.os = platform.system()
+
+
+    def write(self, text):
+        try:
+            mydb = MySQLdb.connect(host='localhost', user='root', passwd='drozer', port=3306)
+            mydb.select_db('drozer')
+            cursor = mydb.cursor()
+            # text ="insert into exported_activities values('1','2')"
+            cursor.execute(text)
+            mydb.autocommit(1)
+            mydb.close()
+            cursor.close()
+        except MySQLdb.Error, e:
+            mydb.rollback()
+            print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+            mydb.close()
+            cursor.close()
+
+
+'''
+added
+'''
 class DecolouredStream(StreamWrapper):
     """
     DecolouredStream is a wrapper around a stream, that processes colour meta-

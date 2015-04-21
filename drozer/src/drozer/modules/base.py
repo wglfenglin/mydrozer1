@@ -39,6 +39,7 @@ class Module(object):
             """
             self.stdout = session.filestdout
             self.txmlstdout = session.txmlstdout
+            self.sqlstdout = session.sqlstdout
             self.stderr = session.stderr
             self.variables = session.variables
         

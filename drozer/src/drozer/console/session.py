@@ -11,7 +11,7 @@ from pydiesel.reflection import Reflector
 
 from mwr.common import cmd_ext as cmd
 from mwr.common import console
-from mwr.common.stream import ColouredStream, DecolouredStream, FileColouredStream,XMLColouredStream
+from mwr.common.stream import ColouredStream, DecolouredStream, FileColouredStream, XMLColouredStream, MYSQLDB
 from mwr.common.text import wrap
 
 from drozer import meta
@@ -51,6 +51,8 @@ class Session(cmd.Cmd):
             self.filestdout = FileColouredStream(self.stdout)
             # session xmlstdout
             self.txmlstdout = XMLColouredStream(self.stdout)
+            self.sqlstdout = MYSQLDB(self.stdout)
+
             self.stderr = ColouredStream(self.stderr)
         else:
             self.stdout = DecolouredStream(self.stdout)
