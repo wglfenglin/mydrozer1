@@ -197,7 +197,6 @@ Finding content providers that do not require permissions to read/write:
         if arguments.permission != None:
             r_providers = self.match_filter(providers, 'readPermission', arguments.permission)
             w_providers = self.match_filter(providers, 'writePermission', arguments.permission)
-
             providers = set(r_providers + w_providers)
             
         exported_providers = self.match_filter(providers, 'exported', True)

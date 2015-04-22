@@ -26,11 +26,14 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
     attackable_services = []
     attackable_providers = []
     attackable_package_name = ''
+    debuggable = False
+    sharedUID = 0
     # added
     def add_arguments(self, parser):
         parser.add_argument("package", help="the identifier of the package to inspect")
 
     def execute(self, arguments):
+
         if arguments.package != None:
             package = self.packageManager().getPackageInfo(arguments.package,
                                                            common.PackageManager.GET_ACTIVITIES | common.PackageManager.GET_RECEIVERS | common.PackageManager.GET_PROVIDERS | common.PackageManager.GET_SERVICES)
@@ -38,14 +41,20 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
 
             activities = self.match_filter(package.activities, 'exported', True)
             receivers = self.match_filter(package.receivers, 'exported', True)
-            providers = self.match_filter(package.providers, 'exported', True)
             services = self.match_filter(package.services, 'exported', True)
+
+            providers = self.match_filter(package.providers, 'authority', True)
+            r_providers = self.match_filter(providers, 'readPermission', True)
+            w_providers = self.match_filter(providers, 'writePermission', True)
+            providers = set(r_providers + w_providers)
+            # providers = self.match_filter(providers, 'exported', True)
             '''
             added
             '''
             self.attackable_activities = self.match_filter(activities, 'permission', 'null')
             self.attackable_services = self.match_filter(services, 'permission', 'null')
-            self.attackable_providers = self.match_filter(providers, 'permission', 'null')
+            self.attackable_providers = providers
+            self.attackable_receivers = self.match_filter(receivers, 'permission', 'null')
             self.scanPackage(package)
             '''
             added
@@ -58,12 +67,17 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
             self.stdout.write("  %d services exported\n" % len(services))
 
             if (application.flags & application.FLAG_DEBUGGABLE) != 0:
+                self.debuggable = True
+
                 self.stdout.write("    is debuggable\n")
 
             if package.sharedUserId != None:
                 self.stdout.write("    Shared UID (%s)\n" % package.sharedUserId)
+                self.sharedUID = package.sharedUserId
+
         else:
             self.stdout.write("No package specified\n")
+
 
     def scanPackage(self, package):
         sql = "insert into exported_activities values('"
@@ -71,37 +85,37 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
         '''
         scan attack_activities
         '''
-        if len(self.attackable_activities) > 0:
-            for attack_activity in self.attackable_activities:
-                intent_filters = self.find_intent_filters(attack_activity, 'activity')
-                if len(intent_filters) > 0:
-                   self.sqlstdout.write("insert into exported_activities values('%s','%s',1);"
-                                     % (self.attackable_package_name, attack_activity.name)
-                      )
-                   for intent_filter in intent_filters:
-                        self.insert(attack_activity, intent_filter, 'activity_intent')
-                else:
-                     self.sqlstdout.write("insert into exported_activities values('%s','%s',0);"
-                                     % (self.attackable_package_name, attack_activity.name)
-                                          )
-                     # self.startWithNull(attack_activity)
+        # if len(self.attackable_activities) > 0:
+        #     for attack_activity in self.attackable_activities:
+        #         intent_filters = self.find_intent_filters(attack_activity, 'activity')
+        #         if len(intent_filters) > 0:
+        #            self.sqlstdout.write("insert into exported_activities values('%s','%s',1);"
+        #                              % (self.attackable_package_name, attack_activity.name)
+        #               )
+        #            for intent_filter in intent_filters:
+        #                 self.insert_with_intent(attack_activity, intent_filter, 'activity_intent')
+        #         else:
+        #              self.sqlstdout.write("insert into exported_activities values('%s','%s',0);"
+        #                              % (self.attackable_package_name, attack_activity.name)
+        #                                   )
+        #              # self.startWithNull(attack_activity)
 
         '''
         scan attack_services
         '''
-        if len(self.attackable_services)> 0:
-            for attack_service in self.attackable_services:
-                intent_filters = self.find_intent_filters(attack_service, 'service')
-                if len(intent_filters)>0:
-                    self.sqlstdout.write("insert into exported_services values('%s','%s',1);"
-                                     % (self.attackable_package_name, attack_service.name)
-                      )
-                    for intent_filter in intent_filters:
-                        self.insert(attack_service, intent_filter, 'service_intent')
-                else:
-                     self.sqlstdout.write("insert into exported_services values('%s','%s',0);"
-                                     % (self.attackable_package_name, attack_service.name)
-                                          )
+        # if len(self.attackable_services)> 0:
+        #     for attack_service in self.attackable_services:
+        #         intent_filters = self.find_intent_filters(attack_service, 'service')
+        #         if len(intent_filters)>0:
+        #             self.sqlstdout.write("insert into exported_services values('%s','%s',1);"
+        #                              % (self.attackable_package_name, attack_service.name)
+        #               )
+        #             for intent_filter in intent_filters:
+        #                 self.insert_with_intent(attack_service, intent_filter, 'service_intent')
+        #         else:
+        #              self.sqlstdout.write("insert into exported_services values('%s','%s',0);"
+        #                              % (self.attackable_package_name, attack_service.name)
+        #                                   )
 
 
         '''
@@ -115,7 +129,7 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
                                      % (self.attackable_package_name, attack_receiver.name)
                       )
                     for intent_filter in intent_filters:
-                        self.insert(attack_receiver, intent_filter, 'receiver_intent')
+                        self.insert_with_intent(attack_receiver, intent_filter, 'receiver_intent')
                 else:
                      self.sqlstdout.write("insert into exported_receivers values('%s','%s',0);"
                                      % (self.attackable_package_name, attack_receiver.name)
@@ -123,11 +137,60 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
         '''
         scan exported_providers
         '''
-        # if len(self.attackable_providers)> 0:
-        #     for attack_provider in self.attackable_providers:
-        #         intent_filters
+        if len(self.attackable_providers)> 0:
+            for attack_provider in self.attackable_providers:
+                self.sqlstdout.write("insert into exported_providers values('%s','%s');"
+                                     % (self.attackable_package_name, attack_provider.name)
+                                     )
+                self.insert_provider(attack_provider)
 
-    def insert(self, component, intent_filter, tableName):
+
+    def insert_provider(self, provider):
+        PatternMatcherTypes = { 0: "PATTERN_LITERAL", 1: "PATTERN_PREFIX", 2: "PATTERN_SIMPLE_GLOB" }
+        sqlsentence = "insert into provider_info values('%s','%b','b','%s','b','%s','%b','%b');"
+        read_permission = provider.readPermission
+        write_permission = provider.writePermission
+        authority = provider.authority
+        provider_name = provider.name
+        multiprocess = provider.multiprocess
+        grant_uri_permission = provider.grantUriPermissions
+        if provider.uriPermissionPatterns != None:
+            uri_permission_patterns = True
+            for pattern in provider.uriPermissionPatterns:
+                path = pattern.getPath()
+                type = PatternMatcherTypes[int(pattern.getType())]
+                self.sqlstdout.write("insert into uri_permission_patterns values('%s','%s','%s')"
+                                    %(provider_name, path, type)
+                                    )
+        else:
+            uri_permission_patterns = False
+        if provider.pathPermissions != None:
+            path_permission = True
+            for permission in provider.pathPermissions:
+                path = permission.getPath()
+                type = PatternMatcherTypes[int(permission.getType())]
+                read_permission = permission.getReadPermission()
+                write_permission = permission.getWritePermission()
+                self.sqlstdout.write("insert into path_permission values('%s','%s','%s','%s','%s')"
+                                    %(provider_name, path, type, read_permission, write_permission))
+        else:
+            pth_permission =False
+
+        self.sqlstdout.write(sqlsentence %(provider_name,
+                                           read_permission,
+                                           write_permission,
+                                           authority,
+                                           multiprocess,
+                                           grant_uri_permission,
+                                           uri_permission_patterns,
+                                           path_permission))
+
+
+
+
+
+
+    def insert_with_intent(self, component, intent_filter, tableName):
         insert_sentence = "insert into "+ tableName+" values('%s','%s','%s','%s');"
         insert_action = ''
         insert_category = ''
@@ -148,7 +211,7 @@ class AttackSurface(Module, common.Filters, common.PackageManager, common.Intent
                     self.sqlstdout.write(insert_sentence % (component.name, insert_action, insert_category, insert_data))
 
 
-
+    # def insert_provider(self, provider):
 
 
 
