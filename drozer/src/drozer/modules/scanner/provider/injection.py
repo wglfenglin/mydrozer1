@@ -13,6 +13,9 @@ class Injection(Module, common.FileSystem, common.PackageManager, common.Provide
     path = ["scanner", "provider"]
     permissions = ["com.mwr.dz.permissions.GET_CONTEXT"]
 
+
+
+
     def add_arguments(self, parser):
         parser.add_argument("-a", "--package", "--uri", dest="package_or_uri", help="specify a package, or content uri to search", metavar="<package or uri>")
         
