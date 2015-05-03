@@ -42,6 +42,7 @@ class Module(object):
             self.sqlstdout = session.sqlstdout
             self.stderr = session.stderr
             self.variables = session.variables
+
         
         self.usage = Usage(self)
 

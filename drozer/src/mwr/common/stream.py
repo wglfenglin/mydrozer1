@@ -126,12 +126,9 @@ class MYSQLDB (StreamWrapper):
     """
     # save
     """
-
-
     def __init__(self, stream):
         StreamWrapper.__init__(self, stream)
         self.os = platform.system()
-
 
     def write(self, text):
         try:

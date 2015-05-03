@@ -14,7 +14,8 @@ Discovered world-writable files in /data:
     date = "2013-04-18"
     license = "BSD (3 clause)"
     path = ["scanner", "misc"]
-    
+    def __init__(self):
+        name = ''
     def add_arguments(self, parser):
         parser.add_argument("target", help="the target directory to search")
         parser.add_argument("-p", "--privileged", action="store_true", default=False, help="request root to perform the task in a privileged context")
@@ -23,7 +24,6 @@ Discovered world-writable files in /data:
         if self.isBusyBoxInstalled():
             command = self.busyboxPath() + " find %s \( -type b -o -type c -o -type f -o -type s \) -perm -o=w \-exec ls {} \;" % arguments.target
             privileged = arguments.privileged
-            
             if privileged:
                 if self.isAnySuInstalled():
                     command = self.suPath() + " -c \"%s\"" % command
