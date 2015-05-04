@@ -32,7 +32,6 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
         parser.add_argument("package", help="the identifier of the package to inspect")
 
     def execute(self, arguments):
-
         if arguments.package != None:
             package = self.packageManager().getPackageInfo(arguments.package,
                                                            common.PackageManager.GET_ACTIVITIES | common.PackageManager.GET_RECEIVERS | common.PackageManager.GET_PROVIDERS | common.PackageManager.GET_SERVICES)
@@ -41,7 +40,6 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                 self.debuggable = True
 
                 self.stdout.write("    is debuggable\n")
-
             if package.sharedUserId != None:
                 self.stdout.write("    Shared UID (%s)\n" % package.sharedUserId)
                 self.sharedUID = package.sharedUserId
@@ -177,27 +175,25 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                 if not f.startswith('find: ') and len(f.strip()) > 0:
                     readable_files.append(f)
             if len(readable_files) > 0:
+                self.stdout.write("Discovered world-readable files in %s:\n" % DataDir)
                 for f in readable_files:
                     self.stdout.write("  %s\n" % f)
 
 
             command = self.busyboxPath() + " find %s \( -type b -o -type c -o -type f -o -type s \) -perm -o=w \-exec ls {} \;" % DataDir
-            if self.isAnySuInstalled():
-                command = self.suPath() + " -c \"%s\"" % command
-            else:
-                self.stdout.write("su is not installed...reverting back to unprivileged mode\n")
+            command = self.suPath() + " -c \"%s\"" % command
             files = self.shellExec(command)
             writable_files = []
-
             for f in iter(files.split("\n")):
                 if not f.startswith('find: ') and len(f.strip()) > 0:
                     writable_files.append(f)
 
             if len(writable_files) > 0:
-                self.stdout.write("Discovered world-writable files in %s:\n" % arguments.target)
+                self.stdout.write("Discovered world-writable files in %s:\n" % DataDir)
                 for f in writable_files:
                     self.stdout.write("  %s\n" % f)
-
+        else:
+            self.stderr.write("This command requires BusyBox to complete. Run tools.setup.busybox and then retry.\n")
 
     def insert_provider(self, provider):
         PatternMatcherTypes = {0: "PATTERN_LITERAL", 1: "PATTERN_PREFIX", 2: "PATTERN_SIMPLE_GLOB"}

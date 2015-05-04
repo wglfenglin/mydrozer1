@@ -69,7 +69,6 @@ Package: com.android.mms
                             showResult = False
                     else:
                         showResult = True
-
                     if showResult:
                         self.stdout.write("Package: %s\n" % str(package.packageName))
                         self.stdout.write("  Invocable URIs:\n")

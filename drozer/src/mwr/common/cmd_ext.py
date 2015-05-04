@@ -53,7 +53,8 @@ class Cmd(cmd.Cmd):
         self.cmds = ["run scanner.misc.native -a com.buhgalter.ru"]
         self.cmds = ["run tools.setup.busybox"]
         self.cmds = ["run scanner.misc.readablefiles /data -p"]
-        self.cmds = ["run app.package.attacksurface com.buhgalter.ru "]
+        # self.cmds = ["run app.package.attacksurface com.buhgalter.ru "]
+        self.cmds = ["run tools.setup.busybox"]
     def cmdloop(self, intro=None):
         """
         Repeatedly issue a prompt, accept input, parse an initial prefix
