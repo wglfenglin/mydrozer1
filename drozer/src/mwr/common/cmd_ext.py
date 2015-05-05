@@ -1,3 +1,4 @@
+#-*- coding: UTF-8 -*-
 import cmd
 import os
 
@@ -46,15 +47,16 @@ class Cmd(cmd.Cmd):
         "run scanner.misc.native",
         "run app.package.manifest com.boohee.light , run app.activity.start --component com.android.browser com.android.browser.BrowserActivity --flags ACTIVITY_NEW_TASK --data-uri www.baidu.com"
         self.cmds = [ "run app.activity.start --component com.android.browser com.android.browser.BrowserActivity --flags ACTIVITY_NEW_TASK --data-uri www.baidu.com"]
-        self.cmds = ["run app.package.attacksurface  com.boohee.light"]
+        self.cmds = ["run app.package.attacksurface com.thinksky.itools.markets"]
+        # self.cmds = ["run app.activity.start --component com.android.browser com.android.browser.BrowserActivity --flags ACTIVITY_NEW_TASK"]
 
 
-        # self.cmds = ["run app.provider.info -a com.mwr.dz"]
-        self.cmds = ["run scanner.misc.native -a com.buhgalter.ru"]
-        self.cmds = ["run tools.setup.busybox"]
-        self.cmds = ["run scanner.misc.readablefiles /data -p"]
-        # self.cmds = ["run app.package.attacksurface com.buhgalter.ru "]
-        self.cmds = ["run tools.setup.busybox"]
+        # self.cmds = ["run tools.setup.busybox"]
+        # self.cmds = ["run app.package.attacksurface com.lemeng100.lemeng "]
+        # self.cmds = ["run tools.setup.busybox"]
+        # self.cmds = ["run scanner.activity.browsable"]
+        # self.cmds = ["run scanner.provider.traversal -help"]
+        # self.cmds = ["run app.provider.info"]
     def cmdloop(self, intro=None):
         """
         Repeatedly issue a prompt, accept input, parse an initial prefix

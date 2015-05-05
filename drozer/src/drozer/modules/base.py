@@ -110,6 +110,7 @@ class Module(object):
     def get_cached_klass(cls, klass):
         """
         Retrieve a reflected class reference from the cache of classes.
+        :param klass:
         """
         
         return Module.__klasses[klass]
@@ -168,7 +169,7 @@ class Module(object):
     def null_complete(self, text, state):
         return None
         
-    def run(self, args):
+    def run(self, args, myui = None):
         """
         Entry point for running a module.
 
@@ -187,7 +188,7 @@ class Module(object):
             arguments = parser.parse_args(args)
             
             if hasattr(self, 'execute'):
-                result = self.execute(arguments)
+                result = self.execute(arguments, myui)
             else:
                 self.stderr.write("drozer doesn't know how to do that.\n")
                 self.stderr.write("The %s module does not define an execute() method.\n\n" % self.fqmn())

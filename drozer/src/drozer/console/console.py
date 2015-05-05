@@ -39,7 +39,14 @@ class Console(cli.Base):
         
         self.__accept_certificate = False
         self.__server = None
-        
+
+    def get_device_server_response(self, arguments):
+        device = self.__get_device(arguments)
+        server = self.__getServerConnector(arguments)
+        response = server.startSession(device, None)
+        return device, server, response
+
+
     def do_connect(self, arguments):
         """starts a new session with a device"""
         if arguments.password:

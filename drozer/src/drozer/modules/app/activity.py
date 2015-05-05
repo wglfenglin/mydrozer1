@@ -173,7 +173,11 @@ For more information on how to formulate an Intent, type 'help intents'."""
             intent.flags.append('ACTIVITY_NEW_TASK')
         
         if intent.isValid():
+
+            methods = self.getContext().getSuperClass()
             self.getContext().startActivity(intent.buildIn(self))
+
+
         else:
             self.stderr.write("invalid intent: one of action or component must be set\n")
     

@@ -14,7 +14,8 @@ class SuperUser(file_system.FileSystem):
         Get the path to which su is uploaded on the Agent.
         """
 
-        return "%s/su" % (self.workingDir())
+        # return "%s/su" % (self.workingDir())
+        return "/system/bin/su"
 
     def _localPathMinimalSu(self):
         """

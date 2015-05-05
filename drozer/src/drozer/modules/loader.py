@@ -28,8 +28,9 @@ class ModuleLoader(object):
         """
 
         if(len(self.__modules) == 0):
+
             self.__load(base)
-        
+        modules = self.__modules
         return self.__modules[key]
 
     def reload(self):
@@ -41,6 +42,8 @@ class ModuleLoader(object):
         """
 
         for i in modules.keys():
+            if i =="app.packge":
+                pass
             if modules[i] is not None and modules[i] != "drozer.modules.base":
                 try:
                     __import__(modules[i])

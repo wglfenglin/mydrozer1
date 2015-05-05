@@ -167,7 +167,7 @@ Finding content providers that do not require permissions to read/write:
     date = "2012-11-06"
     license = "BSD (3 clause)"
     path = ["app", "provider"]
-    permissions = ["com.mwr.dz.permissions.GET_CONTEXT"]
+    permissions = ["com.mwr.dz.permissions.      XT"]
 
     PatternMatcherTypes = { 0: "PATTERN_LITERAL", 1: "PATTERN_PREFIX", 2: "PATTERN_SIMPLE_GLOB" }
 

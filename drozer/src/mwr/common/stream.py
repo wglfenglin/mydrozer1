@@ -122,29 +122,45 @@ class XMLColouredStream(StreamWrapper):
             except:
                 self.stream.write("write  error")
 
-class MYSQLDB (StreamWrapper):
+class MYSQLDB ():
     """
     # save
     """
-    def __init__(self, stream):
-        StreamWrapper.__init__(self, stream)
-        self.os = platform.system()
+    # try:
+    #     mydb = MySQLdb.connect(host='localhost', user='root', passwd='drozer', port=3306)
+    #     mydb.select_db('drozer')
+    #     cursor = mydb.cursor()
+    # except :
+    #     print "error"
+    mydb = ''
+    cursor = ''
+    def __init__(self):
+         try:
+            self.mydb = MySQLdb.connect(host='localhost', user='root', passwd='drozer', port=3306)
+            self.mydb.select_db('drozer')
+         except :
+            print "error"
 
     def write(self, text):
         try:
-            mydb = MySQLdb.connect(host='localhost', user='root', passwd='drozer', port=3306)
-            mydb.select_db('drozer')
-            cursor = mydb.cursor()
-            # text ="insert into exported_activities values('1','2')"
-            cursor.execute(text)
-            mydb.autocommit(1)
-            mydb.close()
-            cursor.close()
+            # mydb = MySQLdb.connect(host='localhost', user='root', passwd='drozer', port=3306)
+            # mydb.select_db('drozer')
+            # cursor = mydb.cursor()
+            # # text ="insert into exported_activities values('1','2')"
+            self.cursor = self.mydb.cursor()
+            self.cursor.execute(text)
+            self.mydb.autocommit(1)
+            self.cursor.close()
         except MySQLdb.Error, e:
-            mydb.rollback()
             print "Mysql Error %d: %s" % (e.args[0], e.args[1])
-            mydb.close()
-            cursor.close()
+            self.mydb.rollback()
+    def closemysql(self):
+        if not self.mydb == '':
+            self.mydb.close()
+        if not self.cursor == '':
+            self.cursor.close()
+
+
 
 
 '''

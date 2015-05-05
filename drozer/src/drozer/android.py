@@ -472,4 +472,5 @@ optional arguments:
                 flag = flag | self.__class__.flags[flag_spec]
 
         return flag
+
         

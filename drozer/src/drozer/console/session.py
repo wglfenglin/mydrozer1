@@ -51,7 +51,7 @@ class Session(cmd.Cmd):
             self.filestdout = FileColouredStream(self.stdout)
             # session xmlstdout
             self.txmlstdout = XMLColouredStream(self.stdout)
-            self.sqlstdout = MYSQLDB(self.stdout)
+            self.sqlstdout = MYSQLDB()
 
             self.stderr = ColouredStream(self.stderr)
         else:
@@ -373,7 +373,22 @@ class Session(cmd.Cmd):
                     self.stdout.write(" - %s\n" % (permission))
         else:
             self.stdout.write("Has ApplicationContext: NO\n")
-        
+
+        """
+        get module
+        """
+    def get_module(self, argv):
+        try:
+            module = self.__module(argv[0])
+            module.push_completer = self.__push_module_completer
+            module.pop_completer = self.__pop_module_completer
+            self.__module_pushed_completers = 0
+            return module
+        except KeyError as e:
+            self.stderr.write("unknown module: %s\n" % str(e))
+            return None
+
+
     def do_run(self, args):
         """
         usage: run MODULE [OPTIONS]
@@ -403,7 +418,9 @@ class Session(cmd.Cmd):
                 self.stderr.write("\nCaught SIGINT. Interrupt again to terminate you session.\n")
             except Exception as e:
                 self.handleException(e)
-            
+            finally:
+                self.sqlstdout.closemysql()
+
             while self.__module_pushed_completers > 0:
                 self.__pop_module_completer()
         else:
